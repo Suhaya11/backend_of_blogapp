@@ -129,4 +129,15 @@ router.get("/comment", async (req, res) => {
   }
 });
 
+// add or remove like
+router.post("/like", async (req, res) => {
+  const postId = req.body.postId;
+});
+// in the morning implement
+//1 like and dislike
+//2 addmin endpoing and account and his registration in db a startup
+// 3 report for addmin on post and comment
+
+//add or remove dislike
+
 export default router;
