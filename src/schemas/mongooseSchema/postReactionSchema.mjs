@@ -7,7 +7,7 @@ const likesSchema = new mongoose.Schema({
 
 const dislikesSchema = new mongoose.Schema({
   postId: mongoose.Schema.Types.String,
-  liker: mongoose.Schema.Types.String,
+  disliker: mongoose.Schema.Types.String,
 });
 
 const commentSchema = new mongoose.Schema({

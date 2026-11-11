@@ -2,7 +2,11 @@ import express from "express";
 import { checkSchema, validationResult } from "express-validator";
 import { commentInputSchema } from "../schemas/inputSchema/commentSchema.mjs";
 import mongoose from "mongoose";
-import { Comment } from "../schemas/mongooseSchema/postReactionSchema.mjs";
+import {
+  Comment,
+  Dislike,
+  Like,
+} from "../schemas/mongooseSchema/postReactionSchema.mjs";
 import { Post } from "../schemas/mongooseSchema/postSchema.mjs";
 import { isUserLoggedIn } from "../controllers/verifySession.mjs";
 
@@ -131,10 +135,130 @@ router.get("/comment", async (req, res) => {
 
 // add or remove like
 router.post("/like", async (req, res) => {
+  isUserLoggedIn(req, res);
   const postId = req.body.postId;
+  const userPostingId = req.session.passport.user.postingId;
+
+  try {
+    const liked = await Like.findOne({ postId, liker: userPostingId });
+    const disLiked = await Dislike.findOne({ postId, disliker: userPostingId });
+    if (!liked && !disLiked) {
+      try {
+        const addedLike = new Like({ postId, liker: userPostingId });
+        await addedLike.save();
+        const totalLikes = await Like.find({ postId });
+        const response = { totalLikes, currentUserStatus: "liked" };
+        return res.status(200).send(response);
+      } catch (err) {
+        return res.status(500).send({ err });
+      }
+    } else if (liked) {
+      try {
+        const removeLike = await Like.findOneAndDelete({
+          postId,
+          liker: userPostingId,
+        });
+        if (!removeLike) return res.sendStatus(404);
+
+        const totalLikes = await Like.findOne({ postId });
+        const response = { totalLikes, currentUserStatus: "not liked" };
+        return res.status(200).send(response);
+      } catch (err) {
+        return res.status(500).send(err);
+      }
+    } else if (disLiked) {
+      try {
+        await Dislike.findOneAndDelete({ postId, disliker: userPostingId });
+        const newLike = new Like({ postId, liker: userPostingId });
+        await newLike.save();
+        const totalLikes = await Like.find({ postId });
+        const response = { totlLikes, currentUserStatus: "liked" };
+        return res.status(200).send(response);
+      } catch (err) {
+        return res.status(500).send({ err });
+      }
+    } else {
+      try {
+        await Like.findOneAndDelete({ liker: userPostingId, postId });
+        await Dislike.findOneAndDelete({ disliker: userPostingId, postId });
+        const totalLikes = await Like.find({ postId });
+        return res
+          .status(200)
+          .send({ totalLikes, currentUserStatus: "not liked" });
+      } catch (err) {
+        return res.status(500).send({ err });
+      }
+    }
+  } catch (err) {
+    return res.status(500).send({ err });
+  }
 });
+
+router.post("/dislike", async (req, res) => {
+  isUserLoggedIn(req, res);
+  const postId = req.body.postId;
+  const userPostingId = req.session.passport.user.postingId;
+
+  try {
+    const liked = await Like.findOne({ postId, liker: userPostingId });
+    const disLiked = await Dislike.findOne({ postId, disliker: userPostingId });
+    if (!liked && !disLiked) {
+      try {
+        const addedDislike = new Dislike({ postId, disliker: userPostingId });
+        await addedDislike.save();
+        const totalDislikes = await Dislike.find({ postId });
+        const response = { totalDislikes, currentUserStatus: "disliked" };
+        return res.status(200).send(response);
+      } catch (err) {
+        return res.status(500).send({ err });
+      }
+    } else if (liked) {
+      try {
+        const addedDislike = new Dislike({ postId, disliker: userPostingId });
+        await addedDislike.save();
+        const removeLike = await Like.findOneAndDelete({
+          postId,
+          liker: userPostingId,
+        });
+        if (!removeLike) return res.sendStatus(404);
+
+        const totalDislikes = await Dislike.find({ postId });
+        const response = { totalDislikes, currentUserStatus: "disliked" };
+        return res.status(200).send(response);
+      } catch (err) {
+        return res.status(500).send(err);
+      }
+    } else if (disLiked) {
+      try {
+        await Dislike.findOneAndDelete({ postId, disliker: userPostingId });
+        // const newLike = new Like({ postId, liker: userPostingId });
+        // await newLike.save();
+        const totalDislikes = await Dislike.find({ postId });
+        const response = { totalDislikes, currentUserStatus: "not disliked" };
+        return res.status(200).send(response);
+      } catch (err) {
+        return res.status(500).send({ err });
+      }
+    } else {
+      try {
+        await Like.findOneAndDelete({ liker: userPostingId, postId });
+        await Dislike.findOneAndDelete({ disliker: userPostingId, postId });
+        const totalDislikes = await Like.find({ postId });
+        return res
+          .status(200)
+          .send({ totalDislikes, currentUserStatus: "not disliked" });
+      } catch (err) {
+        return res.status(500).send({ err });
+      }
+    }
+  } catch (err) {
+    return res.status(500).send({ err });
+  }
+});
+
 // in the morning implement
 //1 like and dislike
+
 //2 addmin endpoing and account and his registration in db a startup
 // 3 report for addmin on post and comment
 
