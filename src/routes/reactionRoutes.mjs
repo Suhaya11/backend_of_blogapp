@@ -9,6 +9,8 @@ import {
 } from "../schemas/mongooseSchema/postReactionSchema.mjs";
 import { Post } from "../schemas/mongooseSchema/postSchema.mjs";
 import { isUserLoggedIn } from "../controllers/verifySession.mjs";
+import { reportInputSchema } from "../schemas/inputSchema/reportSchema.mjs";
+import { CommentReport } from "../schemas/mongooseSchema/repostSchema.mjs";
 
 const router = express.Router();
 
@@ -172,7 +174,7 @@ router.post("/like", async (req, res) => {
         const newLike = new Like({ postId, liker: userPostingId });
         await newLike.save();
         const totalLikes = await Like.find({ postId });
-        const response = { totlLikes, currentUserStatus: "liked" };
+        const response = { totalLikes, currentUserStatus: "liked" };
         return res.status(200).send(response);
       } catch (err) {
         return res.status(500).send({ err });
@@ -193,7 +195,7 @@ router.post("/like", async (req, res) => {
     return res.status(500).send({ err });
   }
 });
-
+//add dislike or remove dislike
 router.post("/dislike", async (req, res) => {
   isUserLoggedIn(req, res);
   const postId = req.body.postId;
@@ -255,13 +257,12 @@ router.post("/dislike", async (req, res) => {
     return res.status(500).send({ err });
   }
 });
+// report comment
 
-// in the morning implement
-//1 like and dislike
-
-//2 addmin endpoing and account and his registration in db a startup
-// 3 report for addmin on post and comment
-
-//add or remove dislike
+//next test reports end point for comments
+// implement report for post
+// add admin account
+//test the ovaerall app endpoints
+//the move on to frontend
 
 export default router;

@@ -4,6 +4,11 @@ import { postSchema } from "../schemas/inputSchema/postSchema.mjs";
 import { Post } from "../schemas/mongooseSchema/postSchema.mjs";
 import mongoose from "mongoose";
 import { isUserLoggedIn } from "../controllers/verifySession.mjs";
+import {
+  Comment,
+  Dislike,
+  Like,
+} from "../schemas/mongooseSchema/postReactionSchema.mjs";
 
 const router = express.Router();
 
@@ -49,9 +54,21 @@ router.get("/find/:id", async (req, res) => {
   if (!mongoose.isValidObjectId(id))
     return res.status(300).send({ err: "invalid id " });
 
-  const thePost = await Post.findOne({ postId: id });
+  const thePost = await Post.findOne({ _id: id });
   if (!thePost) return res.status(404).send({ err: "not found" });
-  return res.status(200).send(thePost);
+  try {
+    const comments = await Comment.find({ postId: thePost.postId });
+    const likes = await Like.find({ postId: thePost.postId });
+    const dislikes = await Dislike.find({ postId: thePost.postId });
+    return res
+      .status(200)
+      .send({
+        thePost,
+        reaction: { likes: likes.length, comments, dislikes: dislikes.length },
+      });
+  } catch (err) {
+    return res.status(500).send({ err: "something went wrong" });
+  }
 });
 // get all post by current ser
 router.get("/myPosts", async (req, res) => {

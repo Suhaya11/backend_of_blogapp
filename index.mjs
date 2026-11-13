@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import usersRouter from "./src/routes/usersRoutes.mjs";
@@ -7,10 +8,11 @@ import MongoStore from "connect-mongo";
 import passport from "passport";
 import postRouter from "./src/routes/postRoutes.mjs";
 import reactionRoute from "./src/routes/reactionRoutes.mjs";
+import reportRouter from "./src/routes/reportRoutes.mjs";
 const PORT = process.env.PORT || 3002;
 
 const app = express();
-app.use(cookieParser("sulaimann"));
+app.use(cookieParser(process.env.COOKIEPARSER_SECRET));
 // app.use(
 //   session({
 //     secret: "this is the secret",
@@ -27,7 +29,7 @@ app.use(express.json());
 
 // connect to db
 mongoose
-  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/records")
+  .connect(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log("Listening on port ", PORT);
@@ -39,7 +41,7 @@ mongoose
 
 app.use(
   session({
-    secret: "sulaiman haladu yau",
+    secret: process.env.SESSION_SECRET,
     cookie: { maxAge: 1000 * 60 * 60 * 24, secure: false },
     resave: false,
 
@@ -54,6 +56,7 @@ app.use(passport.session());
 app.use("/api/users", usersRouter);
 app.use("/api/posts", postRouter);
 app.use("/api/post/reaction", reactionRoute);
+app.use("/api/reports/", reportRouter);
 app.get("/", (req, res) => {
   console.log(req.session);
   req.session.visited = true;

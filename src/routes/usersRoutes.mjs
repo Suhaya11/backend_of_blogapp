@@ -76,7 +76,7 @@ router.post(
       if (!theUser)
         return res.status(404).send({ error: "invalid credentials" });
       console.log("from usersroutes", req.session);
-      req.session.user = theUser.id;
+      // req.session.user = theUser.id;
       return res.status(200).send(theUser);
     } catch (err) {
       return res.status(401).send({ error: err });
