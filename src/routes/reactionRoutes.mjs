@@ -9,8 +9,8 @@ import {
 } from "../schemas/mongooseSchema/postReactionSchema.mjs";
 import { Post } from "../schemas/mongooseSchema/postSchema.mjs";
 import { isUserLoggedIn } from "../controllers/verifySession.mjs";
-import { reportInputSchema } from "../schemas/inputSchema/reportSchema.mjs";
-import { CommentReport } from "../schemas/mongooseSchema/repostSchema.mjs";
+// import { reportInputSchema } from "../schemas/inputSchema/reportSchema.mjs";
+// import { CommentReport } from "../schemas/mongooseSchema/repostSchema.mjs";
 
 const router = express.Router();
 

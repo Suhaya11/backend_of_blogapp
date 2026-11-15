@@ -5,20 +5,10 @@ import { AdduserSchema } from "../schemas/inputSchema/userSchema.mjs";
 import mongoose from "mongoose";
 import "../stratagies/local-stratagy.mjs";
 import passport from "passport";
-import { isUserLoggedIn } from "../controllers/verifySession.mjs";
+import { isAdmin, isUserLoggedIn } from "../controllers/verifySession.mjs";
 const router = express.Router();
 
-router.get("/", async (req, res) => {
-  console.log(req.session);
-  if (!req.session?.passport?.user?._id)
-    return res.status(402).send({ err: "User not logged in" });
-  if (
-    !mongoose.isValidObjectId(req.session.passport.user._id) ||
-    !(await User.findOne({ _id: req.session.passport.user._id }))
-  )
-    return res
-      .status(402)
-      .send({ err: "User not logged in or invalid login " });
+router.get("/", isAdmin, async (req, res) => {
   const theusers = await User.find();
 
   return res.send(theusers);
@@ -43,21 +33,23 @@ router.post("/adduser", checkSchema(AdduserSchema), async (req, res) => {
   }
 });
 // retrive single user api with id
-router.get("/:id", async (req, res) => {
-  const { params } = req;
+router.get("/:id", isUserLoggedIn, async (req, res) => {
+  const {
+    params: { id },
+  } = req;
   console.log("sesson", req.session);
-  if (!mongoose.isValidObjectId(params)) {
+  if (!mongoose.isValidObjectId(id)) {
     return res.status(400).send({ error: "invalid id" });
   }
   try {
-    const theUser = await User.findOne({ _id: params.id });
+    const theUser = await User.findById(id);
     console.log(theUser);
     if (!theUser) return res.status(404).send({ error: "user not found" });
     return res.status(200).send(theUser);
   } catch (err) {
     // console.log(err);
 
-    return res.send({ error: err });
+    return res.send({ err: err.message });
   }
 });
 // get user to loging
@@ -66,25 +58,26 @@ router.post(
   passport.authenticate("local"),
   checkSchema(AdduserSchema),
   async (req, res) => {
+    console.log(req.session);
     const result = validationResult(req);
     if (!result.isEmpty())
       return res.status(400).send({ error: result.array().at(0).msg });
     const { username, password } = req.body;
-    res.send("ok");
+
     try {
       const theUser = await User.findOne({ username, password });
       if (!theUser)
         return res.status(404).send({ error: "invalid credentials" });
-      console.log("from usersroutes", req.session);
-      // req.session.user = theUser.id;
+      // console.log("from usersroutes", req.session);
+
       return res.status(200).send(theUser);
     } catch (err) {
-      return res.status(401).send({ error: err });
+      return res.status(401).send({ err: err.message });
     }
   },
 );
-router.patch("/edit/:id", async (req, res) => {
-  console.log("this is the passport object", req.session.passport);
+router.patch("/edit/:id", isUserLoggedIn, async (req, res) => {
+  // console.log("this is the passport object", req.session.passport);
 
   const {
     body: { username, email, password },
@@ -93,29 +86,24 @@ router.patch("/edit/:id", async (req, res) => {
   if (!mongoose.isValidObjectId(id))
     return res.status(401).send({ err: "invalid id" });
 
-  isUserLoggedIn(req, res);
-
-  if (id !== req.session.passport?.user?._id)
+  if (id !== req.session.passport?.user?.user?._id)
     return res.status(401).send({ err: "Cannot edit someones Profile" });
   const theuser = await User.findById(id);
   if (!theuser) return res.status(404).send({ err: "something went wrong !!" });
   try {
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: id },
-      {
-        $set: {
-          username,
-          email,
-          password,
-        },
+    const updatedUser = await User.findByIdAndUpdate(id, {
+      $set: {
+        username,
+        email,
+        password,
       },
-    );
+    });
     if (!updatedUser)
-      return res.status(500).send({ err: "something went wrong !!" });
+      return res.status(500).send({ err: "something went wrong " });
     const currentUserIndb = await User.findById(id);
     if (!currentUserIndb)
       return res.status(404).send({ err: "something went wrong" });
-    req.session.user = currentUserIndb;
+    // req.session.user = currentUserIndb;
     // passport.authenticate("local");
     res.status(200).send(currentUserIndb);
   } catch (err) {
@@ -123,13 +111,12 @@ router.patch("/edit/:id", async (req, res) => {
   }
 });
 // log out
-router.post("/logout", async (req, res) => {
-  if (!req.user) return res.sendStatus(401);
-  req.logout((err) => (err ? res.sendStatus(401) : res.sendStatus(200)));
+router.post("/logout", isUserLoggedIn, async (req, res) => {
+  return req.logout((err) => (err ? res.sendStatus(401) : res.sendStatus(200)));
 });
 
 // find user by username and password
-router.post("/user", checkSchema(AdduserSchema), async (req, res) => {
+router.get("/user", checkSchema(AdduserSchema), async (req, res) => {
   const {
     body: { email, username, password },
   } = req;
@@ -139,5 +126,17 @@ router.post("/user", checkSchema(AdduserSchema), async (req, res) => {
   if (!theUser) return res.sendStatus(404);
   return res.send(theUser);
 });
-
+// delete user by admin
+router.delete("/user:id", isAdmin, async (req, res) => {
+  const {
+    params: { id },
+  } = req;
+  try {
+    const user = await User.findByIdAndDelete(id);
+    if (!user) return res.status(404).send({ err: "User not found" });
+    return res.status(200).send({ res: "Succesfully deleted the user", user });
+  } catch (err) {
+    return res.status(500).send({ err: err.message });
+  }
+});
 export default router;

@@ -14,9 +14,7 @@ const router = express.Router();
 
 //add post
 
-router.post("/", checkSchema(postSchema), async (req, res) => {
-  if (!req.session?.passport?.user?._id)
-    return res.status(401).send({ err: "user not logged in" });
+router.post("/", isUserLoggedIn, checkSchema(postSchema), async (req, res) => {
   const result = validationResult(req);
   if (!result.isEmpty())
     return res.status(401).send({ err: result.array().at(0).msg });
@@ -36,12 +34,11 @@ router.post("/", checkSchema(postSchema), async (req, res) => {
 });
 // get all posts
 router.get("/", async (req, res) => {
-  return res.send("hhhhh");
   try {
     const posts = await Post.find({});
     return res.status(200).send(posts);
   } catch (err) {
-    return res.send({ err });
+    return res.send({ err: err.message });
   }
 });
 // get a post by id
@@ -58,60 +55,62 @@ router.get("/find/:id", async (req, res) => {
   if (!thePost) return res.status(404).send({ err: "not found" });
   try {
     const comments = await Comment.find({ postId: thePost.postId });
-    const likes = await Like.find({ postId: thePost.postId });
-    const dislikes = await Dislike.find({ postId: thePost.postId });
-    return res
-      .status(200)
-      .send({
-        thePost,
-        reaction: { likes: likes.length, comments, dislikes: dislikes.length },
-      });
+    const likes = (await Like.findAndCount({ postId: thePost.postId })) || 0;
+    const dislikes =
+      (await Dislike.findAndCount({ postId: thePost.postId })) || 0;
+    return res.status(200).send({
+      thePost,
+      reaction: { likes, comments, dislikes },
+    });
   } catch (err) {
     return res.status(500).send({ err: "something went wrong" });
   }
 });
 // get all post by current ser
-router.get("/myPosts", async (req, res) => {
-  isUserLoggedIn(req, res);
+router.get("/myPosts", isUserLoggedIn, async (req, res) => {
   const usersPosts = await Post.find({
-    poster: req?.session?.passport?.user?.postingId,
+    poster: req?.session?.passport?.user?.user.postingId,
   });
   return res.status(200).send(usersPosts);
 });
 
 //edit a post by its id
-router.patch("/:id", checkSchema(postSchema), async (req, res) => {
-  isUserLoggedIn(req, res);
-  const result = validationResult(req);
-  if (!result.isEmpty()) return res.status(400).send(result.array().at(0).msg);
-  const {
-    body: { title, body: postBody },
-    params: { id },
-  } = req;
-  const thePost = await Post.findOne({ postId: id });
-  if (!thePost) return res.status(404).send({ err: "not found" });
-  if (thePost.poster != req.session?.passport?.user?.postingId)
-    return res.status(401).send({
-      err: "cannot edit someones post",
-    });
-  try {
-    await Post.findByIdAndUpdate(id, {
-      $set: {
-        title,
-        body: postBody,
-      },
-    });
+router.patch(
+  "/:id",
+  isUserLoggedIn,
+  checkSchema(postSchema),
+  async (req, res) => {
+    isUserLoggedIn(req, res);
+    const result = validationResult(req);
+    if (!result.isEmpty())
+      return res.status(400).send(result.array().at(0).msg);
+    const {
+      body: { title, body: postBody },
+      params: { id },
+    } = req;
+    const thePost = await Post.findOne({ postId: id });
+    if (!thePost) return res.status(404).send({ err: "not found" });
+    if (thePost.poster != req.session?.passport?.user?.user?.postingId)
+      return res.status(401).send({
+        err: "cannot edit someones post",
+      });
+    try {
+      await Post.findByIdAndUpdate(id, {
+        $set: {
+          title,
+          body: postBody,
+        },
+      });
 
-    const updatedPost = await Post.findOne({ postId: id });
-    return res.status(204).send(updatedPost);
-  } catch (err) {
-    return res.status(400).send({ err });
-  }
-});
+      const updatedPost = await Post.findOne({ postId: id });
+      return res.status(204).send(updatedPost);
+    } catch (err) {
+      return res.status(400).send({ err });
+    }
+  },
+);
 // delete post by its id
-router.delete("/:id", async (req, res) => {
-  isUserLoggedIn(req, res);
-
+router.delete("/:id", isUserLoggedIn, async (req, res) => {
   const {
     params: { id },
   } = req;
@@ -119,7 +118,7 @@ router.delete("/:id", async (req, res) => {
     return res.status(401).send({ err: "invalid id" });
   const thePost = await Post.findOne({ postId: id });
   if (!thePost) return res.status(404).send({ err: "not found" });
-  if (thePost.poster != req?.session?.passport?.user?.postingId)
+  if (thePost.poster != req?.session?.passport?.user?.user.postingId)
     return res.status(401).send({ err: "cannot delete someones post" });
   const deletedPost = await Post.findOneAndDelete({ postId: id });
   if (!deletedPost)

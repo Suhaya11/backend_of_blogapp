@@ -9,6 +9,8 @@ import passport from "passport";
 import postRouter from "./src/routes/postRoutes.mjs";
 import reactionRoute from "./src/routes/reactionRoutes.mjs";
 import reportRouter from "./src/routes/reportRoutes.mjs";
+import adminRoute from "./src/routes/adminRoute.mjs";
+import { Admin } from "./src/schemas/mongooseSchema/adminSchema.mjs";
 const PORT = process.env.PORT || 3002;
 
 const app = express();
@@ -30,6 +32,28 @@ app.use(express.json());
 // connect to db
 mongoose
   .connect(process.env.MONGO_URI)
+  .then(async () => {
+    try {
+      const newAdmin = {
+        username: process.env.ADMIN_USERNAME,
+        password: process.env.ADMIN_PASSWORD,
+        secret: process.env.ADMIN_SECRET,
+        auth: process.env.ADMIN_AUTH,
+      };
+
+      const adminAccount = await Admin.findOne(newAdmin);
+      if (!adminAccount) {
+        console.log(newAdmin);
+        const admin = new Admin(newAdmin);
+        await admin.save();
+      } else {
+        const myAdmin = await Admin.findOne(newAdmin);
+        console.log(myAdmin);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  })
   .then(() => {
     app.listen(PORT, () => {
       console.log("Listening on port ", PORT);
@@ -53,6 +77,7 @@ app.use(
 );
 app.use(passport.initialize());
 app.use(passport.session());
+app.use("/api/yanargizo", adminRoute);
 app.use("/api/users", usersRouter);
 app.use("/api/posts", postRouter);
 app.use("/api/post/reaction", reactionRoute);
