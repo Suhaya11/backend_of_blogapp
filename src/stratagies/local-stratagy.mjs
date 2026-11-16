@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy } from "passport-local";
 import { User } from "../schemas/mongooseSchema/userSchema.mjs";
 import { Admin } from "../schemas/mongooseSchema/adminSchema.mjs";
+import bcrypt from "bcrypt";
 passport.serializeUser(async (user, done) => {
   try {
     const type = user.constructor.modelName;
@@ -35,7 +36,7 @@ export default passport.use(
   new Strategy(async (username, password, done) => {
     try {
       const findedUser = await User.findOne({ username });
-      if (!findedUser || findedUser.password !== password)
+      if (!findedUser || !(await bcrypt.compare(password, findedUser.password)))
         throw new Error("invalid credentials");
       done(null, findedUser);
     } catch (err) {

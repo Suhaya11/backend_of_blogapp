@@ -11,6 +11,8 @@ import reactionRoute from "./src/routes/reactionRoutes.mjs";
 import reportRouter from "./src/routes/reportRoutes.mjs";
 import adminRoute from "./src/routes/adminRoute.mjs";
 import { Admin } from "./src/schemas/mongooseSchema/adminSchema.mjs";
+import bcrypt from "bcrypt";
+import { initializeAdmin } from "./src/controllers/initializeAdmin.mjs";
 const PORT = process.env.PORT || 3002;
 
 const app = express();
@@ -32,28 +34,7 @@ app.use(express.json());
 // connect to db
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(async () => {
-    try {
-      const newAdmin = {
-        username: process.env.ADMIN_USERNAME,
-        password: process.env.ADMIN_PASSWORD,
-        secret: process.env.ADMIN_SECRET,
-        auth: process.env.ADMIN_AUTH,
-      };
-
-      const adminAccount = await Admin.findOne(newAdmin);
-      if (!adminAccount) {
-        console.log(newAdmin);
-        const admin = new Admin(newAdmin);
-        await admin.save();
-      } else {
-        const myAdmin = await Admin.findOne(newAdmin);
-        console.log(myAdmin);
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  })
+  .then(initializeAdmin())
   .then(() => {
     app.listen(PORT, () => {
       console.log("Listening on port ", PORT);

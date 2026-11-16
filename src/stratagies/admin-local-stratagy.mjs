@@ -2,24 +2,30 @@ import passport from "passport";
 import { Strategy } from "passport-local";
 
 import { Admin } from "../schemas/mongooseSchema/adminSchema.mjs";
-
+import bcrypt from "bcrypt";
 export default passport.use(
   "admin-local",
-  new Strategy(async (username, password, done) => {
-    try {
-      const findedUser = await Admin.findOne({ username, password });
-      if (
-        !findedUser ||
-        findedUser.password !== password ||
-        findedUser.secret !== process.env.ADMIN_SECRET ||
-        findedUser.auth !== process.env.ADMIN_AUTH
-      )
-        throw new Error("invalid credentials");
-      done(null, findedUser);
-    } catch (err) {
-      done(err, null);
-    }
-  }),
+  new Strategy(
+    { passReqToCallback: true },
+    async (req, username, password, done) => {
+      try {
+        const { secret, auth } = req.body;
+        const findedUser = await Admin.findOne({
+          username,
+        });
+        if (
+          !findedUser ||
+          !(await bcrypt.compare(password, findedUser.password)) ||
+          !(await bcrypt.compare(secret, findedUser.secret)) ||
+          !(await bcrypt.compare(auth, findedUser.auth))
+        )
+          throw new Error("invalid credentials");
+        done(null, findedUser);
+      } catch (err) {
+        done(err, null);
+      }
+    },
+  ),
 );
 // check web for the probabity of using morethan 2 checks with local startated
 // install encryption package and encrypt each password

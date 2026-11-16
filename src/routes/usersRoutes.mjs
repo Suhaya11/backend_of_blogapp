@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import "../stratagies/local-stratagy.mjs";
 import passport from "passport";
 import { isAdmin, isUserLoggedIn } from "../controllers/verifySession.mjs";
+import bcrypt from "bcrypt";
 const router = express.Router();
 
 router.get("/", isAdmin, async (req, res) => {
@@ -22,8 +23,14 @@ router.post("/adduser", checkSchema(AdduserSchema), async (req, res) => {
   if (!result.isEmpty()) {
     return res.sendStatus(401);
   }
+  const hashedPassword = await bcrypt.hash(password, 12);
   const postingId = crypto.randomUUID();
-  const theUser = new User({ email, password, username, postingId });
+  const theUser = new User({
+    email,
+    password: hashedPassword,
+    username,
+    postingId,
+  });
   try {
     const savedUser = await theUser.save();
     return res.status(201).send(savedUser);
@@ -65,8 +72,8 @@ router.post(
     const { username, password } = req.body;
 
     try {
-      const theUser = await User.findOne({ username, password });
-      if (!theUser)
+      const theUser = await User.findOne({ username });
+      if (!theUser || !(await bcrypt.compare(password, theUser.password)))
         return res.status(404).send({ error: "invalid credentials" });
       // console.log("from usersroutes", req.session);
 
@@ -139,4 +146,5 @@ router.delete("/user:id", isAdmin, async (req, res) => {
     return res.status(500).send({ err: err.message });
   }
 });
+
 export default router;
