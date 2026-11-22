@@ -12,13 +12,13 @@ const dislikesSchema = new mongoose.Schema({
 
 const commentSchema = new mongoose.Schema({
   commenter: {
-    type: mongoose.Schema.Types.String,
+    type: mongoose.Schema.Types.ObjectId,
   },
   message: {
     type: mongoose.Schema.Types.String,
   },
   postId: {
-    type: mongoose.Schema.Types.String,
+    type: mongoose.Schema.Types.ObjectId,
   },
 });
 export const Comment = mongoose.model("Comment", commentSchema);

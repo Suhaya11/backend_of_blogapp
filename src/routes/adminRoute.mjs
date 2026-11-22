@@ -6,7 +6,6 @@ router.post(
   "/login",
   passport.authenticate("admin-local"),
   async (req, res) => {
-    console.log(req.session);
     return res.sendStatus(200);
   },
 );

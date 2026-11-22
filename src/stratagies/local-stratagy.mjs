@@ -3,6 +3,7 @@ import { Strategy } from "passport-local";
 import { User } from "../schemas/mongooseSchema/userSchema.mjs";
 import { Admin } from "../schemas/mongooseSchema/adminSchema.mjs";
 import bcrypt from "bcrypt";
+import fs from "fs/promises";
 passport.serializeUser(async (user, done) => {
   try {
     const type = user.constructor.modelName;
@@ -17,6 +18,7 @@ passport.deserializeUser(async (obj, done) => {
     try {
       const findedUser = await Admin.findById(obj.user._id);
       if (!findedUser) throw new Error("user not found !");
+
       done(null, findedUser);
     } catch (err) {
       done(err, null);
@@ -26,6 +28,7 @@ passport.deserializeUser(async (obj, done) => {
       // console.log("the id ", obj.user._id);
       const findedUser = await User.findById(obj.user._id);
       if (!findedUser) throw new Error("user not found !");
+
       done(null, findedUser);
     } catch (err) {
       done(err, null);

@@ -23,7 +23,7 @@ router.post(
   isUserLoggedIn,
   checkSchema(reportInputSchema),
   async (req, res) => {
-    const reporter = req.session.passport.user.user.postingId;
+    const reporter = req.session.passport.user.user._id;
     const {
       body: { commentId, reason },
     } = req;
@@ -74,7 +74,7 @@ router.delete("/comment/:id", isUserLoggedIn, async (req, res) => {
   } = req;
   if (!mongoose.isValidObjectId(id))
     return res.status(401).send({ err: "invalid Id" });
-  const reporter = req.session.passport.user.user.postingId;
+  const reporter = req.session.passport.user.user._id;
   try {
     const theReport = await CommentReport.findById(id);
     if (!theReport) return res.status(404).send({ err: "report not found" });
@@ -108,7 +108,7 @@ router.post(
   isUserLoggedIn,
   checkSchema(reportInputSchema),
   async (req, res) => {
-    const reporter = req.session.passport.user.postingId;
+    const reporter = req.session.passport.user.user._id;
     const {
       body: { postId, reason },
     } = req;
@@ -161,7 +161,7 @@ router.delete("/post/:id", isUserLoggedIn, async (req, res) => {
   } = req;
   if (!mongoose.isValidObjectId(id))
     return res.status(401).send({ err: "invalid Id" });
-  const reporter = req.session.passport.user.postingId;
+  const reporter = req.session.passport.user.user._id;
   try {
     const theReport = await postReport.findById(id);
     if (!theReport) return res.status(404).send({ err: "report not found" });
@@ -182,7 +182,6 @@ router.delete("/post/:id", isUserLoggedIn, async (req, res) => {
 });
 //get posts reports
 router.get("/post", isAdmin, async (req, res) => {
-  isUserLoggedIn(req, res);
   try {
     const postReports = await postReport.find({});
     return res.status(200).send(postReports);
@@ -240,7 +239,7 @@ router.patch("/review/:id", isAdmin, async (req, res) => {
     } catch (err) {
       return res.status(500).send({ err: err.message });
     }
-  } else if (status === "accepte") {
+  } else if (status === "accept") {
     try {
       const findCommentReport = await CommentReport.findById(id);
       const findPostReport = await postReport.findById(id);

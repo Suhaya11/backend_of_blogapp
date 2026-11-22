@@ -19,6 +19,8 @@ const postSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    likes: [{ type: mongoose.Schema.Types.ObjectId }],
+    dislikes: [{ type: mongoose.Schema.Types.ObjectId }],
   },
   {
     timestamps: true,

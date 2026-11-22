@@ -18,14 +18,21 @@ router.post("/", isUserLoggedIn, checkSchema(postSchema), async (req, res) => {
   const result = validationResult(req);
   if (!result.isEmpty())
     return res.status(401).send({ err: result.array().at(0).msg });
-  const poster = req.session?.passport?.user?.postingId;
+  const poster = req.session?.passport?.user?.user._id;
   const postId = crypto.randomUUID();
   const {
     body: { title, body },
   } = req;
 
   try {
-    const addedPost = new Post({ title, body, poster, postId });
+    const addedPost = new Post({
+      title,
+      body,
+      poster,
+      postId,
+      likes: [],
+      dislikes: [],
+    });
     const savedPost = await addedPost.save();
     res.status(204).send(savedPost);
   } catch (err) {
@@ -68,10 +75,14 @@ router.get("/find/:id", async (req, res) => {
 });
 // get all post by current ser
 router.get("/myPosts", isUserLoggedIn, async (req, res) => {
-  const usersPosts = await Post.find({
-    poster: req?.session?.passport?.user?.user.postingId,
-  });
-  return res.status(200).send(usersPosts);
+  try {
+    const usersPosts = await Post.find({
+      poster: req?.session?.passport?.user?.user.postingId,
+    });
+    return res.status(200).send(usersPosts);
+  } catch (err) {
+    return res.status(500).send({ err: err.message });
+  }
 });
 
 //edit a post by its id
@@ -103,9 +114,9 @@ router.patch(
       });
 
       const updatedPost = await Post.findOne({ postId: id });
-      return res.status(204).send(updatedPost);
+      return res.status(200).send(updatedPost);
     } catch (err) {
-      return res.status(400).send({ err });
+      return res.status(400).send({ err: err.message });
     }
   },
 );
@@ -118,7 +129,7 @@ router.delete("/:id", isUserLoggedIn, async (req, res) => {
     return res.status(401).send({ err: "invalid id" });
   const thePost = await Post.findOne({ postId: id });
   if (!thePost) return res.status(404).send({ err: "not found" });
-  if (thePost.poster != req?.session?.passport?.user?.user.postingId)
+  if (thePost.poster != req?.session?.passport?.user?.user._id)
     return res.status(401).send({ err: "cannot delete someones post" });
   const deletedPost = await Post.findOneAndDelete({ postId: id });
   if (!deletedPost)

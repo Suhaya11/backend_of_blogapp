@@ -24,12 +24,11 @@ router.post("/adduser", checkSchema(AdduserSchema), async (req, res) => {
     return res.sendStatus(401);
   }
   const hashedPassword = await bcrypt.hash(password, 12);
-  const postingId = crypto.randomUUID();
+
   const theUser = new User({
     email,
     password: hashedPassword,
     username,
-    postingId,
   });
   try {
     const savedUser = await theUser.save();
@@ -83,6 +82,7 @@ router.post(
     }
   },
 );
+// edit user details
 router.patch("/edit/:id", isUserLoggedIn, async (req, res) => {
   // console.log("this is the passport object", req.session.passport);
 
